@@ -1,0 +1,153 @@
+name: Requirement (obligation-driven)
+description: Propose a normative requirement derived from an obligation, using the obligation matrix.
+title: "Requirement: <short name>"
+labels: ["requirement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Requirements are scoped, normative, and testable. An implementation can comply with or violate them in a way a third party can demonstrate. A requirement without a parent principle is visibly unjustified, so name one. Qualifications, scopes, and mechanics belong here, not in the principles.
+  - type: dropdown
+    id: parent-principle
+    attributes:
+      label: Parent principle (primary)
+      description: The principle this requirement derives from. Add supporting principles in the notes field below if more than one applies.
+      options:
+        - "P1: Minimal core, lawful floor"
+        - "P2: Carry little, anchor everything"
+        - "P3: One substrate, many profiles"
+        - "P4: No raw personal data in the core"
+        - "P5: No hidden role transitions"
+        - "P6: Built for machine scale"
+        - "P7: Honest absence"
+    validations:
+      required: true
+  - type: dropdown
+    id: normative-level
+    attributes:
+      label: Normative level
+      options:
+        - MUST
+        - SHOULD
+        - MAY
+    validations:
+      required: true
+  - type: textarea
+    id: statement
+    attributes:
+      label: Requirement statement
+      description: The normative text as it would appear in a specification. One requirement per issue.
+    validations:
+      required: true
+  - type: textarea
+    id: trigger
+    attributes:
+      label: Trigger
+      description: What fact pattern activates the obligation (actor role, transaction type, amount, aggregation history, documentation state, jurisdiction).
+    validations:
+      required: true
+  - type: input
+    id: responsible-party
+    attributes:
+      label: Responsible party
+      description: Who must determine, report, withhold, retain, or act.
+    validations:
+      required: true
+  - type: input
+    id: authority
+    attributes:
+      label: Primary authority
+      description: The statute, regulation, rule, or standard, with citation. Predicted or draft law goes to an experimental profile, not here.
+    validations:
+      required: true
+  - type: input
+    id: jurisdiction
+    attributes:
+      label: Jurisdiction or governing body
+    validations:
+      required: true
+  - type: input
+    id: effective-date
+    attributes:
+      label: Effective date
+      description: When the obligation is or becomes law in force.
+    validations:
+      required: true
+  - type: textarea
+    id: required-facts
+    attributes:
+      label: Required facts
+      description: What the responsible party must know to meet the obligation.
+    validations:
+      required: true
+  - type: dropdown
+    id: timing
+    attributes:
+      label: Timing
+      description: When the responsible party must have the facts or make the determination.
+      options:
+        - Before authorization
+        - Before settlement
+        - At settlement
+        - After settlement
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: What must be retained or verifiably referenced, and by whom.
+    validations:
+      required: true
+  - type: dropdown
+    id: missing-data-treatment
+    attributes:
+      label: Missing-data treatment
+      description: What happens when the required facts are absent at the required time. The chosen treatment must be recorded with the transaction.
+      options:
+        - Withhold
+        - Hold
+        - Route
+        - Block
+        - Permit
+        - Unresolved (recorded as open, per P7)
+    validations:
+      required: true
+  - type: dropdown
+    id: placement
+    attributes:
+      label: Protocol placement
+      description: Profile mandate and core promotion are separate decisions. Core promotion turns on cross-profile interoperability need.
+      options:
+        - Core anchor capability
+        - Profile requirement
+        - Extension
+        - Off-protocol reference
+    validations:
+      required: true
+  - type: textarea
+    id: insufficiency
+    attributes:
+      label: Why the existing substrate or profile is insufficient
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Conformance test or verification method
+      description: How a third party would demonstrate compliance or violation.
+    validations:
+      required: true
+  - type: textarea
+    id: interest-disclosure
+    attributes:
+      label: Interest disclosure
+      description: Protocols, products, clients, or investments (including the submitter's own) that could reasonably benefit from this requirement. Applies to every contributor uniformly. Write "none" if none.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Supporting principles, related issues, and notes
+    validations:
+      required: false
