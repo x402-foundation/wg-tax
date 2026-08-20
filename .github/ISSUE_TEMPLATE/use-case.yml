@@ -1,0 +1,72 @@
+name: Use case
+description: Describe a tax, accounting, audit, or reporting scenario the protocol must not prevent.
+title: "Use Case: <short name>"
+labels: ["use-case"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use cases describe scenarios; they do not propose normative text. If a use case implies requirements, list them below and file each as a separate Requirement issue once the scenario is agreed. This form mirrors the identity working group's intake so the two trackers stay cross-readable.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Bookkeeping, pricing, and reporting
+        - Identity, delegation, and entity resolution
+        - Institutional and regulatory compliance
+        - Nonprofit and philanthropic
+        - Settlement asset classification
+        - Disputes and evidence
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: The scenario, concretely. Real numbers and named flows beat abstractions.
+    validations:
+      required: true
+  - type: textarea
+    id: actors
+    attributes:
+      label: Actors
+      description: Principal, operator, agent, custodian, facilitator, seller, auditor, regulator, and so on, as applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: main-goal
+    attributes:
+      label: Main goal
+      description: What the responsible party must be able to do or prove.
+    validations:
+      required: true
+  - type: textarea
+    id: implied-requirements
+    attributes:
+      label: Requirements this implies
+      description: Candidate anchors, records, or behaviors. Each becomes its own Requirement issue with the obligation matrix filled in.
+    validations:
+      required: false
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: Prior art
+      description: How existing systems handle this (ACH, card networks, ISO 20022, invoicing standards, marketplace reporting), with references.
+    validations:
+      required: false
+  - type: textarea
+    id: maps-to
+    attributes:
+      label: Maps to
+      description: Which of the five questions and which principles (P1 through P7) this scenario exercises.
+    validations:
+      required: false
+  - type: textarea
+    id: interest-disclosure
+    attributes:
+      label: Interest disclosure
+      description: Protocols, products, clients, or investments (including the submitter's own) that could reasonably benefit from this use case being prioritized. Write "none" if none.
+    validations:
+      required: true

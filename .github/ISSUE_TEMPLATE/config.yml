@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Foundation principles (TSC track)
+    url: https://github.com/x402-foundation/tsc/issues
+    about: The principles this working group's requirements derive from are under consolidation at the TSC. Principle text is discussed there.
+  - name: Identity working group tracker
+    url: https://github.com/x402-foundation/wg-identity/issues
+    about: Identity, delegation, and payee-attribution scenarios are filed with the identity working group. Cross-file here when a tax or accounting obligation attaches.

@@ -1,0 +1,67 @@
+name: Open question
+description: An unresolved question requiring practitioner, counsel, or technical validation before a requirement can be written.
+title: "Open Question: <short name>"
+labels: ["open-question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Open questions stay visibly open until resolved (P7 applies to process too). Resolution produces either a Requirement issue, a documented non-requirement, or a referral.
+  - type: textarea
+    id: question
+    attributes:
+      label: The question
+      description: Stated so that a specialist could answer it without attending our meetings.
+    validations:
+      required: true
+  - type: textarea
+    id: origin
+    attributes:
+      label: Origin
+      description: Where this arose (document section, session date, issue number, external development).
+    validations:
+      required: true
+  - type: dropdown
+    id: validation-type
+    attributes:
+      label: What resolves it
+      options:
+        - Formal tax opinion
+        - Legal or regulatory review
+        - Accounting guidance mapping
+        - Regulator engagement or ruling
+        - Technical analysis or prototype
+        - Working group decision
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - High (blocks a requirement in progress)
+        - Medium (blocks a planned requirement)
+        - Low (monitor)
+    validations:
+      required: true
+  - type: textarea
+    id: candidate-reviewers
+    attributes:
+      label: Candidate reviewers
+      description: Roles or named volunteers who could take it. Sign-ups happen in comments.
+    validations:
+      required: false
+  - type: textarea
+    id: related
+    attributes:
+      label: Related principles, questions, and issues
+    validations:
+      required: false
+  - type: textarea
+    id: interest-disclosure
+    attributes:
+      label: Interest disclosure
+      description: Interests (including the submitter's own) that could reasonably benefit from a particular resolution. Write "none" if none.
+    validations:
+      required: true
