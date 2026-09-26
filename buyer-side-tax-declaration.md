@@ -1,6 +1,6 @@
 # Buyer-Side Tax Declaration
 
-**Status:** Draft for working group review, revision 5
+**Status:** Draft for working group review, revision 6
 **Companion to:** PR #4, *Tax Jurisdiction Discovery, Settle-Only Provenance & SCITT Audit Receipts* (@whawk46 / Corrente Labs)
 **Scope:** Adds buyer-side qualification. Does not modify settle-only accounting, SCITT registration, or EIP-3009 event derivation.
 
@@ -18,6 +18,10 @@ This companion specifies:
 4. A **multi-axis tax result**, jurisdiction-scoped, replacing the scalar regime enumeration of revision 1.
 5. Additional **receipt fields** preserving the decision context, plus an informative aggregation principle.
 6. A **principal attribution model**, recording what the seller knew about the principal behind the signing key, how it is bound to the declaration, and what is retained. Added in revision 3.
+
+### What changed in revision 6
+
+Folds the review exchange of 18 to 26 September. §2.2's restatement of the general rule carries both clauses, the payer account and the key that identifies it, which revision 5 had abbreviated. §6.6.5 replaces `MAY record VERIFIED` with two obligations of equal force: `VERIFIED` when the equality check is performed and holds, `NOT_CHECKED` with a machine-readable `principalAttributionReason` when the check cannot be performed; masked identity and strict `ABSENT` are stated as one rule. §6.6.6 collapses the two invariant blocks of revision 5 into one with no precondition. This is a widening, not only a simplification: for a key-anchored `principalId`, revision 5 forbade `DECLARED_VERIFIED` under reverse charge only on `ABSENT`; revision 6 forbids it on every status other than `VERIFIED`, so `NOT_CHECKED`, `FAILED` and `INDETERMINATE` now block on both branches. §6.6.7's unverified sub-example is identified as the state a conforming seller must not produce, and becomes vector Q. §6.6.9 keeps its paired claim unchanged; vector N expects `NOT_CHECKED`, and the dossier records a retrieval locator alongside the artifact digest, with `locator_absent` and `locator_unresolvable` kept distinct. §6.6.10 is new and houses vector Q with its own scope, its own claim and its own recording contract. Question 10 is unchanged.
 
 ### What changed in revision 5
 
@@ -142,7 +146,7 @@ A wallet address does not, by itself, supply the customer's tax status and locat
 
 In the proposed EVM/EIP-3009 profile, the declaration MUST be signed with the **same key that signs the EIP-3009 payment authorization**. This binds the declaration to the payer without introducing any new identity primitive, reuses the structured-signature principle of the payment profile, and identifies the key behind the assertion. The EIP-712 types, domain and encoding of optional fields for this new declaration remain to be defined.
 
-This same-key requirement is the EVM-profile instance of a general rule stated in §6.6.5: the declaration is signed by the key that signs the settlement authorization on the rail named by the settlement record. §2.2 does not define that rule; it applies it to EIP-3009.
+This same-key requirement is the EVM-profile instance of the general rule of §6.6.5: the right-hand side of the self-attribution equality is the payer account to which the settlement rail attributes the transfer, identified by the key that signed the settlement authorization on the rail named by the settlement record. §2.2 applies that rule to EIP-3009; it does not define it.
 
 The declaration does not prove that the signer is the natural or legal person named by `taxId`. It establishes that the **signing key** asserted the declared facts. The signature alone does not prove its time of creation; receipt and use must be observed separately.
 
@@ -479,6 +483,7 @@ The object may stay out of the receipt. It must not stay out of controlled reten
 | `principalAttributionStatus` | closed enumeration | State of the attribution at settlement |
 | `principalId` | string, `null` if absent | The principal identifier as presented at quote time |
 | `principalAttributionHash` | string, `null` if absent | Digest of the unsigned payload, algorithm included, as defined in §6.6.2 |
+| `principalAttributionReason` | closed enumeration, optional | Why `NOT_CHECKED` was recorded when the seller could not perform a check it would otherwise have performed. Added in revision 6. |
 
 `principalAttributionStatus` takes one of:
 
@@ -494,6 +499,14 @@ A status rather than a boolean, because present-and-unchecked, present-and-verif
 
 `NOT_CHECKED` exists because the verification mechanism remains out of scope. This value records the absence of verification honestly without the specification mandating a mechanism. The specification does not conclude that this state is sufficient under applicable law or under the seller's acceptance policy.
 
+`NOT_CHECKED` covers two facts that a later reader must be able to tell apart: the seller did not attempt a check, and the seller attempted one and could not perform it. Only the first is the seller's choice. `principalAttributionReason` separates them. It is absent when no check was attempted. When a check was attempted and could not be performed, it MUST be present and takes one value in this revision:
+
+| Value | Meaning |
+|---|---|
+| `cannot_establish_equality` | The self-attribution check of §6.6.5 was attempted and one side of the equality could not be obtained or compared |
+
+The value names a failure class, not a cause. Several causes reach the same class: a settlement record that could not be read at the time of the check, a rail that attributes settlement to an omnibus account while the authorization names the end payer, an identifier form the rail cannot compare. Causes MUST NOT be added to this enumeration. Where a cause is worth recording, it belongs in a separate, optional, free-text `principalAttributionDetail` field, which this revision names but does not specify; its absence changes nothing in §6.6.5.
+
 A `VERIFIED` status presupposes a policy that checks the links between the payer key, the principal, and the taxable entity named in the declaration. A mandate valid for principal A does not justify use of the tax identifier of B. The retained dossier MUST identify the verifier, the policy applied and the time of the check; the format of those references is for the working group.
 
 Permitted combinations:
@@ -507,7 +520,7 @@ Any other combination is invalid and MUST be rejected.
 
 On `principalId` and disclosure: a receipt registered with a transparency service is potentially public, and a tax identifier may constitute personal data depending on its holder and the context. The principal identifier MUST be available to the seller for qualification. Its inclusion in any externally disclosed receipt MUST follow the receipt's access-control and disclosure profile. Availability to the seller does not imply public disclosure.
 
-The combination table above describes the full receipt held by the seller. A redacted view intended for a third party MUST be identified as such, and a masked identity MUST NOT be read as `ABSENT`.
+The combination table above describes the full receipt held by the seller. `ABSENT` means strictly that no attribution accompanied the settlement. A redacted view intended for a third party MUST be identified as such; a masked identity is a presented attribution whose value is withheld, and MUST NOT be recorded or read as `ABSENT`.
 
 **Self-attribution.** The convention is stated profile-agnostically, so that §2.2's [EVM] scope does not leak into it.
 
@@ -517,7 +530,16 @@ The combination table above describes the full receipt held by the seller. A red
 
 *Equality.* The convention fires when, and only when, the `<namespace>:<reference>` of `principalId` equals the CAIP-2 network identifier of the settlement, and its `<account>` equals the payer account on that rail. Both are read from the **settlement record**, never from configuration: a rail identifier taken from configuration passes all current traffic and diverges only on the tail, which is where cross-chain payers are. Same account with a different `<namespace>:<reference>` is not a self-attribution; it is a cross-chain identity claim and belongs to delegation verification, not to this shortcut.
 
-*Effect.* When the convention fires, the presentation constitutes a self-attribution: the payer account is itself the principal. The seller establishes this by an equality check over values it already holds, not by a declaration. The attribution payload is the one-element object `{ principalId }`, its digest is well-defined, and the combination table above applies unchanged. The seller MAY record `VERIFIED`, the seller being the verifier and account-and-chain equality the policy. A payer that is itself the principal SHOULD present a self-attribution; whether this SHOULD becomes MUST is open question 10.
+*Effect.* When the convention fires, the presentation constitutes a self-attribution: the payer account is itself the principal. The seller establishes this by an equality check over values it already holds, not by a declaration. The attribution payload is the one-element object `{ principalId }`, its digest is well-defined, and the combination table above applies unchanged.
+
+Two obligations of equal force govern what the seller records:
+
+- A seller that performs the equality check and finds it holds MUST record `VERIFIED`, the seller being the verifier and account-and-chain equality the policy.
+- A seller that attempts the check and cannot perform it, because one side of the equality could not be obtained or compared, MUST record `NOT_CHECKED` with `principalAttributionReason: cannot_establish_equality`. An account-abstraction payer is not by itself such a case: the right-hand side is the payer account, which the rail attributes and which a smart account presents like any other, as vector P establishes. The case is a seller that could not read the payer account or the network identifier from the settlement record when it checked.
+
+A seller that does not attempt the check records `NOT_CHECKED` with no reason. A presented attribution on which the convention does not fire, the chain or the account differing, is recorded as `NOT_CHECKED` unless verified by delegation. The receipt carries what the seller did, not a permission; §6.6.6 depends on it. A bare MUST to record `VERIFIED` would leave a seller that cannot establish the equality non-conforming whatever it does, and the cheap way out of that position is to claim an equality it did not establish; the second obligation removes that incentive.
+
+A payer that is itself the principal SHOULD present a self-attribution; whether this SHOULD becomes MUST is open question 10.
 
 #### 6.6.6 Presence, verification, qualification: three distinct facts
 
@@ -531,27 +553,17 @@ Successful tax-identifier verification MUST NOT imply verified principal attribu
 
 The distinction between the two checks lies in their definition and in the acceptance policy. Mechanical checks remain possible: co-presence of fields, matching digests, consistency of identifiers and linkage to the evidence used.
 
-Revision 3 stated that `ABSENT` could not distinguish "no delegation needed" from "attribution not supplied", and withdrew the invariant on that ground. The self-attribution convention of §6.6.5 removes the ground for key-anchored identifiers: a payer that is itself the principal can present a self-attribution at zero cost, so its absence is a choice, not an ambiguity. The invariant returns with its precondition inside the block, so that a resolver or a linter reading the block alone applies it exactly where the text intends:
+Revision 3 stated that `ABSENT` could not distinguish "no delegation needed" from "attribution not supplied", and withdrew the invariant on that ground. The self-attribution convention of §6.6.5 removes the ground: a payer that is itself the principal can present a self-attribution at zero cost, so its absence is a choice, not an ambiguity. Revision 5 restored the invariant as two blocks, one per anchoring case, with different triggers. Review showed the triggers should not differ, since a key-anchored payer presenting an unverified delegation is in the same position as a non-key-anchored one, and a single block follows:
 
 ```
-PRECONDITION: isKeyAnchored(principalId)
-IF   mechanism = REVERSE_CHARGE
-AND  principalAttributionStatus = ABSENT
-THEN qualificationBasis MUST NOT be DECLARED_VERIFIED
-```
-
-The precondition is not editorial. Without it, the block reaches non-key-anchored identifiers where the convention cannot fire, and a conformance test written from the block alone would apply the invariant outside its ground. With it, the reach is executable rather than implied.
-
-For the non-key-anchored case the review of 15 September settled the residue: a `principalId` that is not key-anchored cannot be equality-checked, so self-attribution is unavailable to it, and under reverse charge the only remaining basis for principal-level assurance is a verified delegation. Hence a second block:
-
-```
-PRECONDITION: NOT isKeyAnchored(principalId)
 IF   mechanism = REVERSE_CHARGE
 AND  principalAttributionStatus IS NOT VERIFIED
 THEN qualificationBasis MUST NOT be DECLARED_VERIFIED
 ```
 
-Together the two blocks make `DECLARED_VERIFIED` under reverse charge available only where the principal is either the payer account itself, established by §6.6.5, or attributed by a verified delegation. Neither branch is silent. What remains open is the strength of the self-attribution recommendation, SHOULD or MUST, in question 10.
+Anchoring governs how `VERIFIED` is reached, by equality for a key-anchored identifier and by verified delegation otherwise, not whether the invariant applies. The `isKeyAnchored` precondition of revision 5 only did work while the two triggers differed; once they coincide it is dead code and is dropped.
+
+The block reads a single field, so it is only as good as that field is truthful. That is why §6.6.5 makes recording `VERIFIED` an obligation when the equality check is performed and holds: a seller that ran the check and wrote `NOT_CHECKED` would be indistinguishable, at the invariant, from one that never looked, and the honest self-custody case the convention exists to close would depend on an optional step. With the obligation, `DECLARED_VERIFIED` under reverse charge is available exactly where the principal is either the payer account itself, established and recorded under §6.6.5, or attributed by a verified delegation. Neither branch is silent, and neither depends on a resolver's internal state. What remains open is the strength of the self-attribution recommendation, SHOULD or MUST, in question 10.
 
 #### 6.6.7 Worked example
 
@@ -584,13 +596,18 @@ principalAttributionHash: "sha-256:7f83b165…"
 
 The digest is identical in the declaration and in the receipt: that is the §6.6.3 binding. The seller retains the full attribution object, its signature and the verification material, outside the receipt.
 
-Same situation, seller not having verified the attribution:
+Same situation, seller not having verified the attribution, and having kept the tax result above:
 
 ```yaml
 principalAttributionStatus: NOT_CHECKED
 principalId: "did:web:example-gmbh.de"
 principalAttributionHash: "sha-256:7f83b165…"
+# inherited from the example above
+mechanism: REVERSE_CHARGE
+qualificationBasis: DECLARED_VERIFIED
 ```
+
+**This record is non-conforming, and it is shown for that reason.** Under §6.6.6, `principalAttributionStatus` is not `VERIFIED`, so `qualificationBasis` MUST NOT be `DECLARED_VERIFIED` for a reverse-charge supply. The vocabulary of §4.2 offers no value for "declaration present, attribution check not performed": `DECLARED_UNVERIFIED` means the verification was unavailable or expired, and §4.2 forbids reading an omission as unavailability. That is not a gap to fill. A seller under reverse charge that has a declaration and has not verified the attribution has two conforming outcomes: verify it, or not apply the reverse charge on the strength of that declaration. Producing the record above is neither. This is the input of vector Q, §6.6.10.
 
 **Self-attribution.** Same supply, settled on Ethereum mainnet, `eip155:1`, but the German taxable person pays directly from its own account `0x1234…`. Per §6.6.5, a `principalId` whose chain and account both match the settlement record is a self-attribution:
 
@@ -632,13 +649,25 @@ The self-attribution convention of §6.6.5 and the invariants of §6.6.6 admit i
 
 **Scope.** These vectors bind the EVM profile of §2.2 and the `eu-vat` result. A vector set for another rail declares its own scope; a fixture that asserts a verdict without naming its scope MUST NOT be read as binding the convention generally.
 
-**Vector N, negative, chain namespace.** Payer account equal on both sides; `<namespace>:<reference>` of `principalId` distinct from the CAIP-2 identifier in the settlement record. Expected: the convention MUST NOT fire; `principalAttributionStatus` is `ABSENT` by rule; under `REVERSE_CHARGE`, `qualificationBasis` MUST NOT be `DECLARED_VERIFIED`. An implementation comparing accounts only passes every positive vector and diverges here.
+**Vector N, negative, chain namespace.** Payer account equal on both sides; `<namespace>:<reference>` of `principalId` distinct from the CAIP-2 identifier in the settlement record. Expected: the convention MUST NOT fire; `principalAttributionStatus` is `NOT_CHECKED`, since an attribution was presented and the shortcut did not apply; under `REVERSE_CHARGE`, `qualificationBasis` MUST NOT be `DECLARED_VERIFIED`. An implementation comparing accounts only passes every positive vector and diverges here.
 
-**Vector P, positive, account abstraction.** `principalId` names the smart account the rail attributes the transfer to; the recovered signer is a distinct owner key. Expected: the convention MUST fire; `principalAttributionStatus` MAY be `VERIFIED`. An implementation comparing against the recovered signer passes vector N and diverges here.
+**Vector P, positive, account abstraction.** `principalId` names the smart account the rail attributes the transfer to; the recovered signer is a distinct owner key. Expected: the convention MUST fire; the check having been performed and holding, `principalAttributionStatus` MUST be `VERIFIED` per §6.6.5. An implementation comparing against the recovered signer passes vector N and diverges here.
 
-**What a runner records.** For a verdict to be evidence rather than a green light, the runner records, alongside the verdict: the extraction path (JSON pointer or equivalent) of each candidate compared, asserting that the two candidates come from distinct paths and are both non-empty before any verdict is evaluated, since an empty or duplicated extraction satisfies an equality vacuously; and a digest of the artifact actually executed, not merely the runner's checkout revision, so that a third party holding only the dossier can rebuild the bytes under test. Vector N MUST be red against an implementation lacking the chain constraint and green with it; a negative vector that is green on both sides exercised nothing.
+**What a runner records.** For a verdict to be evidence rather than a green light, the runner records, alongside the verdict: the extraction path (JSON pointer or equivalent) of each candidate compared, asserting that the two candidates come from distinct paths and are both non-empty before any verdict is evaluated, since an empty or duplicated extraction satisfies an equality vacuously; and a digest of the artifact actually executed, not merely the runner's checkout revision, paired with a retrieval locator for that artifact, so that a third party holding only the dossier can obtain and rebuild the bytes under test. A digest without a locator commits to bytes the auditor cannot reach and does not satisfy this requirement. Two failures of the locator MUST stay distinct in the dossier: `locator_absent`, no locator was recorded, which is a conformance defect of the producer; and `locator_unresolvable`, a locator was recorded and did not resolve at audit time, which is an availability fact about the audit and not a defect of the artifact. Either yields a dossier entry of `NOT_CHECKED` with that reason, never a pass. Vector N MUST be red against an implementation lacking the chain constraint and green with it; a negative vector that is green on both sides exercised nothing.
 
-**What this section does not carry.** The fixtures themselves, in JSON, and the reference runner. They are conformance artifacts, to be supplied by whoever builds them, and they bind only the scope declared above.
+**What this section does not carry.** The fixtures themselves, in JSON, and the reference runner. They are conformance artifacts, to be supplied by whoever builds them, and they bind only the scope declared above. Nor does it carry the rejection vector of §6.6.10: N and P are a pair because each discriminates two plausible implementations, and a vector that does not discriminate is not a third member of that pair.
+
+#### 6.6.10 Rejection vector [EVM rail, non-key-anchored identifier]
+
+The invariant of §6.6.6 reaches identifiers on which the convention of §6.6.5 cannot fire. Vectors N and P are both instances of the convention and do not exercise that reach. Vector Q does.
+
+**Scope.** Same settlement rail as §6.6.9, the EVM profile of §2.2, with a `principalId` that is not a CAIP-10 account, `did:web` being the documented form. Of §2.2, this scope inherits the signature and encoding requirements on the declaration and the same-key requirement between declaration and payment authorization. The account-and-chain equality of §6.6.5 is out of scope here, not exempted: the identifier is not an account, so there is nothing to compare. A later revision MUST NOT re-introduce that comparison for this scope as a correction.
+
+**Claim.** Vector Q establishes that a conforming resolver rejects an identified input by an identified invariant. It does not, and cannot, separate two plausible implementations: any implementation that applies §6.6.6 at all rejects it. It is therefore not evidence of the kind N and P provide, and a conformance claim on §6.6.9 is neither strengthened nor weakened by it. Its falsifiers are a non-conforming artifact that passes Q undetected, and a conforming artifact that Q rejects.
+
+**Vector Q, rejection.** The non-conforming record of §6.6.7: `mechanism: REVERSE_CHARGE`, `principalAttributionStatus: NOT_CHECKED`, `principalId` non-key-anchored, `qualificationBasis: DECLARED_VERIFIED`. Expected: rejected by the invariant of §6.6.6. There is no field value to compare; the expectation is the rejection itself.
+
+**What a runner records.** The equality harness of §6.6.9 does not apply, since there is no candidate pair. For each run the runner records `{ invariant_id, artifact_digest, retrieval_locator, rejected }`, where `rejected` is a boolean. Two runs are required and both are recorded: the record above, for which `rejected` MUST be `true`; and the paired conforming record, identical except that `qualificationBasis` is not `DECLARED_VERIFIED`, for which `rejected` MUST be `false`. A contract that only ever records `rejected: true` is satisfied by an invariant that fires on everything; the second run is what makes the first one evidence.
 
 ### 6.7 Purchase flow and evidence [INFORMATIVE]
 
